@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Netcash.Common.Exceptions;
 using Netcash.Common.Models;
 using Netcash.Domain.Interfaces;
 using Netcash.DTO.Requests;
+using Netcash.DTO.Responses;
+using System.ComponentModel;
 
 namespace Netcash.API.Controllers
 {
@@ -17,11 +20,7 @@ namespace Netcash.API.Controllers
         private readonly ILogger<NetcashController> _logger;
         private readonly INetcashService _service;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NetcashController"/>.
-        /// </summary>
-        /// <param name="logger">Logger instance for tracking API operations.</param>
-        /// <param name="service">Service handling Netcash API logic.</param>
+        [Description("Initializes a new instance of the <see cref=\"NetcashController\"/>.")]
         public NetcashController(ILogger<NetcashController> logger, INetcashService service)
         {
             _logger = logger;
@@ -29,37 +28,37 @@ namespace Netcash.API.Controllers
         }
 
         /// <summary>
-        /// Requests a mandate URL from Netcash.
-        /// This endpoint initiates an eMandate process and returns a URL where the user can approve the mandate.
+        /// Initiates the eMandate creation process and returns a URL where the user can review and approve the mandate.
+        /// 
+        /// Notes:
+        /// - An email containing the OTP and eMandate URL is sent to the provided email address upon initiation.
+        /// - For additional security, the OTP required to sign the mandate is sent separately via SMS.
+        /// - This ensures a two-step authentication process, enhancing mandate approval security.
         /// </summary>
-        /// <param name="request">The mandate request details.</param>
-        /// <param name="netcashServiceKey">The Netcash service key, required for authentication.</param>
-        /// <returns>
-        /// A response containing the mandate URL if successful, or an error message otherwise.
-        /// </returns>
+        /// <param name="request">The mandate creation request details.</param>
+        /// <param name="serviceKey">The Netcash service key from request headers.</param>
+        /// <returns>A response containing the mandate URL.</returns>
         [HttpPost("mandate")]
         [MapToApiVersion("1.0")]
         [Consumes("application/json")]
+        [EndpointDescription(@"Initiates the eMandate creation process and returns a URL for mandate review and approval.
+
+    Notes:
+    - OTP and eMandate URL is sent to the provided email address upon initiation.
+    - The OTP required to sign the mandate is sent separately via SMS.
+    - This ensures a two-step authentication process, enhancing mandate approval security."
+        )]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> RequestMandateUrl([FromBody] CreateMandateRequest request, 
-            [FromHeader(Name = "X-Netcash-Service-Key")] string netcashServiceKey) //TODO: encrypt key
+        public async Task<IActionResult> RequestMandateUrl([FromBody] CreateMandateRequest request,
+            [FromHeader(Name = "X-Netcash-Service-Key")] string serviceKey) //TODO: encrypt key
         {
-            if (string.IsNullOrWhiteSpace(netcashServiceKey))
+            if (string.IsNullOrWhiteSpace(serviceKey))
             {
                 return BadRequest(new ApiResponse<object>(
                     false,
-                    "Missing Netcash service key in request headers",
-                    StatusCodes.Status400BadRequest)
-                );
-            }
-
-            if (request == null)
-            {
-                return BadRequest(new ApiResponse<object>(
-                    false,
-                    "Invalid data",
+                    "Missing Netcash service key in request headers.",
                     StatusCodes.Status400BadRequest)
                 );
             }
@@ -68,7 +67,7 @@ namespace Netcash.API.Controllers
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                 return BadRequest(new ApiResponse<object>(
-                    false, 
+                    false,
                     "Invalid request",
                     StatusCodes.Status400BadRequest, errors: errors)
                 );
@@ -76,21 +75,112 @@ namespace Netcash.API.Controllers
 
             try
             {
-                var mandateUrl = await _service.RequestMandateUrl(request, netcashServiceKey);
+                var mandateUrl = await _service.RequestMandateUrl(request, serviceKey);
                 return Ok(new ApiResponse<string>(
-                    true, 
-                    "Mandate URL received", 
-                    StatusCodes.Status201Created, mandateUrl)
-                );
+                    true,
+                    "Mandate succesfully created",
+                    StatusCodes.Status201Created,
+                    mandateUrl
+                ));
+            }
+            catch (NetcashGatewayException ex)
+            {
+                _logger.LogError(ex, "Error processing RequestMandateUrl request.");
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    $"An error occurred while processing your request: {ex.Message}",
+                    StatusCodes.Status400BadRequest));
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                _logger.LogError(ex, "Unexpected error processing RequestMandateUrl request.");
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    $"An error occurred while processing your request: {ex.Message}",
+                    StatusCodes.Status500InternalServerError));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing request");
+                _logger.LogError(ex, "Unhandled exception in RequestMandateUrl.");
                 return StatusCode(500, new ApiResponse<object>(
                     false,
                     $"An error occurred while processing your request: {ex.Message}",
-                    StatusCodes.Status500InternalServerError)
+                    StatusCodes.Status500InternalServerError));
+            }
+        }
+
+        /// <summary>
+        /// Initiates a batch debit order upload.
+        /// </summary>
+        /// <param name="request">The batch debit order request details.</param>
+        /// <param name="serviceKey">The Netcash service key from request headers.</param>
+        /// <param name="vendorKey">The Netcash vendor key from request headers.</param>
+        /// <returns>A response indicating the outcome of the batch upload.</returns>
+        [HttpPost("debit/batch")]
+        [MapToApiVersion("1.0")]
+        [Consumes("application/json")]
+        [EndpointDescription("Initiates the batch debit order upload process. The response contains the file token and upload report.")]
+        [ProducesResponseType(typeof(ApiResponse<BatchDebitOrderResponse>), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> RequestBatchDebitOrderUpload([FromBody] BatchDebitOrderRequest request,
+    [FromHeader(Name = "X-Netcash-Service-Key")] string serviceKey,
+    [FromHeader(Name = "X-Netcash-Vendor-Key")] string vendorKey) //TODO: encrypt key
+        {
+            if (string.IsNullOrWhiteSpace(serviceKey))
+            {
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    "Missing Netcash service key in request headers.",
+                    StatusCodes.Status400BadRequest)
                 );
+            }
+
+            if (string.IsNullOrWhiteSpace(vendorKey))
+            {
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    "Missing Netcash vendor key in request headers.",
+                    StatusCodes.Status400BadRequest)
+                );
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    "Invalid request",
+                    StatusCodes.Status400BadRequest,
+                    errors: errors
+                ));
+            }
+
+            try
+            {
+                var reponse = await _service.RequestBatchDebitOrderUpload(request, serviceKey, vendorKey);
+                return Ok(new ApiResponse<BatchDebitOrderResponse>(
+                    true,
+                    "Batch debit order uploaded successfully.",
+                    StatusCodes.Status201Created,
+                    reponse
+                 ));
+            }
+            catch (NetcashGatewayException ex)
+            {
+                _logger.LogError(ex, "Error processing RequestBatchDebitOrderUpload request.");
+                return BadRequest(new ApiResponse<object>(
+                    false,
+                    $"An error occurred while processing your request: {ex.Message}",
+                    StatusCodes.Status400BadRequest));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in RequestBatchDebitOrderUpload.");
+                return StatusCode(500, new ApiResponse<object>(
+                    false,
+                    $"An error occurred while processing your request: {ex.Message}",
+                    StatusCodes.Status500InternalServerError));
             }
         }
     }

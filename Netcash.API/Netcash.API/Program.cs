@@ -30,7 +30,7 @@ void ConfigureServices(WebApplicationBuilder builder)
 {
     builder.Services.AddMvcCore().AddApiExplorer();
 
-    builder.Services.AddTransient<NIWS_NIFClient>();
+    builder.Services.AddTransient<INIWS_NIF, NIWS_NIFClient>();
     builder.Services.AddTransient<INetcashGateway, NetcashGateway>();
     builder.Services.AddTransient<INetcashService, NetcashService>();
 }
@@ -53,6 +53,7 @@ void ConfigureControllers(WebApplicationBuilder builder)
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper));
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
     builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -102,10 +103,10 @@ void ConfigureMiddleware(WebApplication app)
         app.MapOpenApi();
     }
 
-    //https://guides.scalar.com/scalar/scalar-api-references/net-integration?utm_source=chatgpt.com#configuration-options__custom-http-client
+    //https://guides.scalar.com/scalar/scalar-api-references/net-integration
     app.MapScalarApiReference(options =>
     {
-        options.Title = "Payfast Integration API";
+        options.Title = "Netcash Integration API";
         options.ShowSidebar = true;
         options.HideModels = false;
         options.HideDownloadButton = false;

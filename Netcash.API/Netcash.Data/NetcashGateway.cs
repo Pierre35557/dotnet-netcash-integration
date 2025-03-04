@@ -25,22 +25,26 @@ namespace Netcash.Data
         {
             try
             {
-                //await _client.OpenAsync();
-
                 var response = await AddMandateInternalAsync(request, serviceKey);
                 if (response?.Errors?.Length > 0)
                     throw new NetcashGatewayException($"Mandate creation failed: {string.Join(";", response.Errors)}");
 
                 return response.MandateUrl;
             }
+            catch (NetcashGatewayException ex)
+            {
+                _logger.LogError(ex, "Error creating mandate");
+                throw;
+            }
+            catch(ArgumentOutOfRangeException ex)
+            {
+                _logger.LogError(ex, "Error creating mandate");
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating mandate");
                 throw new NetcashGatewayException("Unable to add mandate.", ex);
-            }
-            finally
-            {
-                //await _client.CloseAsync();
             }
         }
 
@@ -58,7 +62,7 @@ namespace Netcash.Data
                     request.RegistrationNumber,
                     request.RegisteredName,
                     request.MobileNumber,
-                    MandateOptionsMandateDebitFrequency.Monthly,
+                    request.DebitFrequency,
                     request.CommencementMonth,
                     request.CommencementDay,
                     request.AgreementDate,
@@ -112,7 +116,17 @@ namespace Netcash.Data
                     request.AddToMasterFile
                     );
 
-            return response;
+            return response.ErrorCode switch
+            {
+                "100" => throw new NetcashGatewayException("Authentication failure"),
+                "200" => throw new Exception("Web service error. Contact support@netcash.co.za"),
+                "203" => throw new NetcashGatewayException(
+                                "Parameter error. One or more of the parameters in the string is incorrect",
+                                new Exception(string.Join(",", response.Errors))
+                            ),
+                "000" => response,
+                _ => throw new ArgumentOutOfRangeException(response.ErrorCode, response.ErrorCode, "Invalid code received from Netcash")
+            };
         }
 
         //https://api.netcash.co.za/value-added-services/compact-debit/
@@ -226,7 +240,7 @@ namespace Netcash.Data
                     FileUploadStatus = nameof(BatchStatusEnum.SuccessfulWithErrors),
                     FileUploadReport = response
                 },
-                _ => throw new NetcashGatewayException($"Unexpected batch status received from report: '{status}'.")
+                _ => throw new ArgumentOutOfRangeException(response, response, "batch status received from Netcash")
             };
         }
     }

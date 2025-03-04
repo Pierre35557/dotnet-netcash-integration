@@ -5,6 +5,7 @@ using Netcash.Data;
 using Netcash.Data.Requests;
 using Netcash.Domain.Interfaces;
 using Netcash.DTO.Requests;
+using Netcash.DTO.Responses;
 
 namespace Netcash.Domain.Services
 {
@@ -16,9 +17,9 @@ namespace Netcash.Domain.Services
 
         public NetcashService(IMapper mapper, INetcashGateway gateway, ILogger<NetcashService> logger)
         {
+            _logger = logger;
             _mapper = mapper;
             _gateway = gateway;
-            _logger = logger;
         }
 
         public async Task<string> RequestMandateUrl(CreateMandateRequest request, string serviceKey)
@@ -35,10 +36,34 @@ namespace Netcash.Domain.Services
                 _logger.LogError(ex, "Mandate URL generation failed");
                 throw;
             }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                _logger.LogError(ex, "Mandate URL generation failed due to an unexpected parameter value.");
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unexpected error occurred while generating the mandate URL");
-                throw new Exception("An unexpected error occurred while generating the mandate URL", ex);
+                _logger.LogError(ex, "An unexpected error occurred while generating the mandate URL.");
+                throw new Exception("An unexpected error occurred while generating the mandate URL.", ex);
+            }
+        }
+
+        public async Task<BatchDebitOrderResponse> RequestBatchDebitOrderUpload(BatchDebitOrderRequest request, string serviceKey, string vendorKey) 
+        {
+            try
+            {
+                var response = await _gateway.GenerateDebitOrderFiles(request, serviceKey, vendorKey);
+                return response;
+            }
+            catch (NetcashGatewayException ex)
+            {
+                _logger.LogError(ex, "Batch debit order upload failed");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred while batch uploading debit orders");
+                throw new Exception("An unexpected error occurred while batch uploading debit orders", ex);
             }
         }
     }

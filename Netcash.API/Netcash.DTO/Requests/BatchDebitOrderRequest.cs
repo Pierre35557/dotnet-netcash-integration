@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 
 namespace Netcash.DTO.Requests
 {
@@ -11,26 +7,25 @@ namespace Netcash.DTO.Requests
         public BatchDebitOrderRequest() 
         {
             Users = new List<BatchDebitOrderUserRequest>();
-        } 
+        }
 
+        [Description("Unique reference for tracking the batch in Netcash.")]
         public string BatchReferenceNo { get; set; }
 
-        //yyyyMMdd
+        [Description("Date of debit order processing (CCYYMMDD format).")]
         public string DebitOrderDate { get; set; }
 
+        [Description("List of user debit order transactions.")]
         public List<BatchDebitOrderUserRequest> Users { get; set; }
     }
 
+    [Description("Represents a single debit order transaction.")]
     public class BatchDebitOrderUserRequest
     {
-        /// <summary>
-        /// User account number
-        /// </summary>
+        [Description("User account number to debit.")]
         public string AccountNo { get; set; }
 
-        /// <summary>
-        /// Amount in cents
-        /// </summary>
+        [Description("Amount to debit (in cents, e.g., 10000 for R100.00).")]
         public long Amount { get; set; }
     }
 }

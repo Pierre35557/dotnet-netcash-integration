@@ -1,6 +1,0 @@
-@Netcash.API_HostAddress = http://localhost:5253
-
-GET {{Netcash.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
