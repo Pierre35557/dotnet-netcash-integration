@@ -4,6 +4,7 @@ using Netcash.Common.Models;
 using Netcash.Domain.Interfaces;
 using Netcash.DTO.Requests;
 using Netcash.DTO.Responses;
+using Newtonsoft.Json;
 using System.ComponentModel;
 
 namespace Netcash.API.Controllers
@@ -124,8 +125,8 @@ namespace Netcash.API.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> RequestBatchDebitOrderUpload([FromBody] BatchDebitOrderRequest request,
-    [FromHeader(Name = "X-Netcash-Service-Key")] string serviceKey,
-    [FromHeader(Name = "X-Netcash-Vendor-Key")] string vendorKey) //TODO: encrypt key
+            [FromHeader(Name = "X-Netcash-Service-Key")] string serviceKey,
+            [FromHeader(Name = "X-Netcash-Vendor-Key")] string vendorKey) //TODO: encrypt key
         {
             if (string.IsNullOrWhiteSpace(serviceKey))
             {
@@ -182,6 +183,24 @@ namespace Netcash.API.Controllers
                     $"An error occurred while processing your request: {ex.Message}",
                     StatusCodes.Status500InternalServerError));
             }
+        }
+
+        /// <summary>
+        /// <summary>
+        /// Example endpoint demonstrating how mandate responses are received from Netcash.
+        /// Although not used internally, this endpoint can be implemented for handling Netcash mandate webhooks if required.
+        /// </summary>
+        /// <returns>200 OK</returns>
+
+        [HttpPost]
+        [Route("callback")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult ProcessMandateCallback([FromForm] NetcashMandateWebhookResponse response)
+        {
+            var serializedResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
+            Console.WriteLine(serializedResponse);
+
+            return Ok();
         }
     }
 }

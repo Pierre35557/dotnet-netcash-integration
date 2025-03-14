@@ -4,6 +4,7 @@ using Netcash.Data.Requests;
 using Netcash.DTO.Enums;
 using Netcash.DTO.Requests;
 using Netcash.DTO.Responses;
+using Newtonsoft.Json;
 using NIWS;
 using System.Text;
 
@@ -36,7 +37,7 @@ namespace Netcash.Data
                 _logger.LogError(ex, "Error creating mandate");
                 throw;
             }
-            catch(ArgumentOutOfRangeException ex)
+            catch (ArgumentOutOfRangeException ex)
             {
                 _logger.LogError(ex, "Error creating mandate");
                 throw;
@@ -102,7 +103,7 @@ namespace Netcash.Data
                     request.PhysicalSuburb,
                     request.PhysicalCity,
                     request.PhysicalProvince,
-                    request.PhysicalCity,
+                    request.PhysicalPostalCode,
                     request.MandateActive,
                     request.RequestAVS,
                     request.AVSCheckNumber,
@@ -121,9 +122,7 @@ namespace Netcash.Data
                 "100" => throw new NetcashGatewayException("Authentication failure"),
                 "200" => throw new Exception("Web service error. Contact support@netcash.co.za"),
                 "203" => throw new NetcashGatewayException(
-                                "Parameter error. One or more of the parameters in the string is incorrect",
-                                new Exception(string.Join(",", response.Errors))
-                            ),
+                                $"Parameter error. One or more of the parameters in the string is incorrect: {string.Join(" ", response.Errors)}"),
                 "000" => response,
                 _ => throw new ArgumentOutOfRangeException(response.ErrorCode, response.ErrorCode, "Invalid code received from Netcash")
             };

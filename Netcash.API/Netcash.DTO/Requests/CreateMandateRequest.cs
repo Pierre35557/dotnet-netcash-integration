@@ -87,15 +87,6 @@ namespace Netcash.DTO.Requests
         [Description("Additional notes related to the mandate.")]
         public string Notes { get; set; }
 
-        [EmailAddress]
-        [StringLength(100)]
-        [Description("Email address of the account holder.")]
-        public string EmailAddress { get; set; }
-
-        [StringLength(255)]
-        [Description("Physical address of the account holder.")]
-        public string PhysicalAddress { get; set; }
-
         [StringLength(50)]
         [Description("Custom field 1 for additional data.")]
         public string Field1 { get; set; }
@@ -135,6 +126,90 @@ namespace Netcash.DTO.Requests
         [Description("Indicates if variable debit amounts are allowed.")]
         public bool AllowVariableDebitAmounts { get; set; }
 
+        [Description("The type of bank detail (1=Cheque, 2=Credit Card, 3=Transmission, 4=Saving).")]
+        public int? BankDetailType { get; set; }
+
+        [Description("Bank account holder name.")]
+        public string BankAccountName { get; set; }
+
+        [Description("Bank account number.")]
+        public string BankAccountNumber { get; set; }
+
+        [Description("Branch code.")]
+        public string BranchCode { get; set; }
+
+        [Description("Type of bank account (1=Current, 2=Savings, 3=Transmission).")]
+        public int? BankAccountType { get; set; }
+
+        [Description("Credit card token for mandate payments.")]
+        public string CreditCardToken { get; set; }
+
+        [Description("Credit card type.")]
+        public int? CreditCardType { get; set; }
+
+        [Description("Expiry month of the credit card.")]
+        public int? ExpiryMonth { get; set; }
+
+        [Description("Expiry year of the credit card.")]
+        public int? ExpiryYear { get; set; }
+
+        [Description("Indicates if the number provided is an ID number.")]
+        public bool? IsIdNumber { get; set; }
+
+        [Description("Title of the person (1=Mr, 2=Mrs, 3=Miss, etc.).")]
+        public int? Title { get; set; }
+
+        [EmailAddress]
+        [StringLength(100)]
+        [Description("Email address of the account holder.")]
+        public string EmailAddress { get; set; }
+
+        [Phone]
+        [Description("Phone number.")]
+        public string PhoneNumber { get; set; }
+
+        [RegularExpression(@"^\d{8}$")]
+        [Description("Date of birth (Format: YYYYMMDD).")]
+        public string DateOfBirth { get; set; }
+
+        [Description("Debit day for December if different.")]
+        public string DecemberDebitDay { get; set; }
+
+        [Description("Masterfile group name.")]
+        public string DebitMasterfileGroup { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical address line 1.")]
+        public string PhysicalAddressLine1 { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical address line 2.")]
+        public string PhysicalAddressLine2 { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical address line 3.")]
+        public string PhysicalAddressLine3 { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical suburb.")]
+        public string PhysicalSuburb { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical city.")]
+        public string PhysicalCity { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical province.")]
+        public string PhysicalProvince { get; set; }
+
+        [StringLength(50, MinimumLength = 2)]
+        [Description("Physical postal code.")]
+        public string PhysicalPostalCode { get; set; }
+
+        [Required]
+        [Description("If active and the Debit Order master file is updated, the entry in the master file will also be active.")]
+        public bool MandateActive { get; set; } 
+
         [Description(@"Indicates whether an Account Verification Service (AVS) check should be performed.
         false = No AVS check, true = Perform AVS check.
         ")]
@@ -149,10 +224,10 @@ namespace Netcash.DTO.Requests
         public bool IncludeDebiCheck { get; set; }
 
         [Description("The ID of a predefined DebiCheck mandate template.")]
-        public string DebiCheckMandateTemplateId { get; set; }
+        public string? DebiCheckMandateTemplateId { get; set; }
 
         [Description("The amount of the DebiCheck mandate.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "DebiCheckCollectionAmount must be a positive value.")]
+        //[Range(0.01, double.MaxValue, ErrorMessage = "DebiCheckCollectionAmount must be a positive value.")]
         public decimal? DebiCheckCollectionAmount { get; set; }
 
         [Description(@"Indicates whether the first collection differs from the mandate amount.
@@ -161,16 +236,16 @@ namespace Netcash.DTO.Requests
         public bool? DebiCheckFirstCollectionDiffers { get; set; }
 
         [Description("The first collection date for the DebiCheck mandate (Format: YYYYMMDD).")]
-        [RegularExpression(@"^\d{8}$", ErrorMessage = "DebiCheckFirstCollectionDate must be in YYYYMMDD format.")]
-        public string DebiCheckFirstCollectionDate { get; set; }
+        //[RegularExpression(@"^\d{8}$", ErrorMessage = "DebiCheckFirstCollectionDate must be in YYYYMMDD format.")]
+        public string? DebiCheckFirstCollectionDate { get; set; }
 
         [Description("The amount of the first DebiCheck collection.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "DebiCheckFirstCollectionAmount must be a positive value.")]
+        //[Range(0.01, double.MaxValue, ErrorMessage = "DebiCheckFirstCollectionAmount must be a positive value.")]
         public decimal? DebiCheckFirstCollectionAmount { get; set; }
 
         [Description("The collection day code for the DebiCheck mandate.")]
-        [Range(1, 31, ErrorMessage = "DebiCheckCollectionDayCode must be between 1 and 31.")]
-        public int DebiCheckCollectionDayCode { get; set; }
+        //[Range(1, 31, ErrorMessage = "DebiCheckCollectionDayCode must be between 1 and 31.")]
+        public int? DebiCheckCollectionDayCode { get; set; }
 
         [Description(@"Indicates whether the mandate should be added to the master file.
         true = automatically add the mandate to the master file allowing debit orders to be conducted without manual approval. 

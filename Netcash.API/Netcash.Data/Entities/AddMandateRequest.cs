@@ -4,7 +4,6 @@ namespace Netcash.Data.Requests
 {
     public class AddMandateRequest
     {
-        public string ServiceKey { get; set; }
         public string AccountReference { get; set; }
         public string MandateName { get; set; }
         public decimal MandateAmount { get; set; }
